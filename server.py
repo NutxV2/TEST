@@ -1,42 +1,32 @@
-# server.py
-import asyncio
-import websockets
-import json
-from datetime import datetime
+from flask import Flask, request, jsonify
 
-USERS = {}  # username -> last_seen timestamp
-CLIENTS = set()
+app = Flask(__name__)
 
-STATUS_TIMEOUT = 5  # วินาที
+# เก็บข้อมูลชั่วคราวใน memory
+data_storage = []
 
-async def broadcast_status():
-    while True:
-        now = datetime.now().timestamp()
-        status_list = []
-        for username, last_seen in USERS.items():
-            status = "ONLINE" if now - last_seen <= STATUS_TIMEOUT else "OFFLINE"
-            status_list.append({"username": username, "status": status})
-        if CLIENTS:
-            message = json.dumps(status_list)
-            await asyncio.wait([client.send(message) for client in CLIENTS])
-        await asyncio.sleep(1)
+@app.route("/")
+def index():
+    return "Server Running!"
 
-async def handler(websocket, path):
-    CLIENTS.add(websocket)
+@app.route("/send_data", methods=["POST"])
+def receive_data():
     try:
-        async for message in websocket:
-            data = json.loads(message)
-            username = data.get("username")
-            if username:
-                USERS[username] = datetime.now().timestamp()
-    except:
-        pass
-    finally:
-        CLIENTS.remove(websocket)
+        data = request.json
+        if not data:
+            return jsonify({"status": "error", "message": "No JSON received"}), 400
+        
+        # เพิ่มข้อมูลลง memory
+        data_storage.append(data)
+        print("Received data:", data)
+        return jsonify({"status": "success", "message": "Data received!"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-async def main():
-    server = await websockets.serve(handler, "0.0.0.0", 5000)
-    asyncio.create_task(broadcast_status())
-    await server.wait_closed()
+@app.route("/get_data", methods=["GET"])
+def get_data():
+    # คืนข้อมูลทั้งหมดที่เก็บไว้ชั่วคราว
+    return jsonify(data_storage)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
