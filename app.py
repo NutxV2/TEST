@@ -239,6 +239,9 @@ HTML_TEMPLATE = """
                                                 Status
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                                Device
+                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Username
                                             </th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
@@ -274,6 +277,14 @@ HTML_TEMPLATE = """
                                                             {user.status}
                                                         </div>
                                                     </td>
+
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-slate-300 font-medium text-sm">
+                                                            {user.device || "Unknown"}
+                                                        </div>
+                                                    </td>
+
+
                                                     <td className="px-6 py-4">
                                                         <div className="text-white font-medium text-sm">
                                                             {user.username}
@@ -359,4 +370,3 @@ def get_data():
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
-
