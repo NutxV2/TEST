@@ -92,9 +92,21 @@ HTML_TEMPLATE = """
                         updated[u].status = timeSince <= STATUS_TIMEOUT ? 'ONLINE' : 'OFFLINE';
                         updated[u].elapsedTime = Math.floor((now - user.startTime) / 1000);
                     });
+                    
+                    // คำนวณ stats ทันทีจาก updated data
+                    let online = 0, offline = 0, diamonds = 0;
+                    Object.values(updated).forEach(u => {
+                        if (u.status === 'ONLINE') online++; else offline++;
+                        const d = u.diamonds;
+                        if (/^\d+$/.test(d)) diamonds += parseInt(d);
+                        else if (d.includes('=')) d.split(',').forEach(p => {
+                            const m = p.match(/=(\d+)/); if (m) diamonds += parseInt(m[1]);
+                        });
+                    });
+                    setStats({ total: Object.keys(updated).length, online, offline, diamonds });
+                    
                     return updated;
                 });
-                calculateStats();
             };
 
             const calculateStats = () => {
@@ -205,3 +217,4 @@ def get_data():
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
