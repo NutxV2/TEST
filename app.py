@@ -117,57 +117,48 @@ HTML_TEMPLATE = """
                 
                 setUsers(prevUsers => {
                     const updated = { ...prevUsers };
+                    let online = 0;
+                    let offline = 0;
+                    let totalDiamonds = 0;
                     
                     Object.keys(updated).forEach(username => {
                         const user = updated[username];
                         const timeSinceUpdate = now - user.lastUpdate;
+                        const isOnline = timeSinceUpdate <= STATUS_TIMEOUT;
                         
                         updated[username] = {
                             ...user,
-                            status: timeSinceUpdate <= STATUS_TIMEOUT ? 'ONLINE' : 'OFFLINE',
+                            status: isOnline ? 'ONLINE' : 'OFFLINE',
                             elapsedTime: Math.floor((now - user.startTime) / 1000)
                         };
+                        
+                        if (isOnline) {
+                            online++;
+                        } else {
+                            offline++;
+                        }
+                        
+                        try {
+                            const diamondStr = user.diamonds;
+                            if (/^\d+$/.test(diamondStr)) {
+                                totalDiamonds += parseInt(diamondStr);
+                            } else if (diamondStr.includes('=')) {
+                                diamondStr.split(',').forEach(pair => {
+                                    const match = pair.match(/=(\d+)/);
+                                    if (match) totalDiamonds += parseInt(match[1]);
+                                });
+                            }
+                        } catch (e) {}
+                    });
+                    
+                    setStats({
+                        total: Object.keys(updated).length,
+                        online,
+                        offline,
+                        diamonds: totalDiamonds
                     });
                     
                     return updated;
-                });
-                
-                calculateStats();
-            };
-
-            const calculateStats = () => {
-                const now = Date.now();
-                let online = 0;
-                let offline = 0;
-                let totalDiamonds = 0;
-                
-                Object.values(users).forEach(user => {
-                    const timeSinceUpdate = now - user.lastUpdate;
-                    
-                    if (timeSinceUpdate <= STATUS_TIMEOUT) {
-                        online++;
-                    } else {
-                        offline++;
-                    }
-                    
-                    try {
-                        const diamondStr = user.diamonds;
-                        if (/^\d+$/.test(diamondStr)) {
-                            totalDiamonds += parseInt(diamondStr);
-                        } else if (diamondStr.includes('=')) {
-                            diamondStr.split(',').forEach(pair => {
-                                const match = pair.match(/=(\d+)/);
-                                if (match) totalDiamonds += parseInt(match[1]);
-                            });
-                        }
-                    } catch (e) {}
-                });
-                
-                setStats({
-                    total: Object.keys(users).length,
-                    online,
-                    offline,
-                    diamonds: totalDiamonds
                 });
             };
 
