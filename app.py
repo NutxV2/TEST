@@ -76,26 +76,30 @@ HTML_TEMPLATE = """
                     setUsers(prevUsers => {
                         const updatedUsers = { ...prevUsers };
                         
-                        dataList.forEach(data => {
-                            const username = data.username || 'Unknown';
-                            const diamonds = formatDiamonds(data.diamonds);
-                            
-                            if (!updatedUsers[username]) {
-                                updatedUsers[username] = {
-                                    username,
-                                    diamonds,
-                                    startTime: now,
-                                    lastUpdate: now,
-                                    status: 'ONLINE'
-                                };
-                            } else {
-                                updatedUsers[username] = {
-                                    ...updatedUsers[username],
-                                    diamonds,
-                                    lastUpdate: now
-                                };
-                            }
-                        });
+                    dataList.forEach(data => {
+                        const username = data.username || 'Unknown';
+                        const diamonds = formatDiamonds(data.diamonds);
+                        const device = data.device || 'Unknown';
+
+                        if (!updatedUsers[username]) {
+                            updatedUsers[username] = {
+                                username,
+                                diamonds,
+                                device,         // ✅ เพิ่มตรงนี้
+                                startTime: now,
+                                lastUpdate: now,
+                                status: 'ONLINE'
+                            };
+                        } else {
+                            updatedUsers[username] = {
+                                ...updatedUsers[username],
+                                diamonds,
+                                device,         // ✅ และตรงนี้ด้วย
+                                lastUpdate: now
+                            };
+                        }
+                    });
+
                         
                         return updatedUsers;
                     });
