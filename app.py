@@ -23,7 +23,6 @@ HTML_TEMPLATE = """
         body { 
             margin: 0; 
             padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -31,15 +30,6 @@ HTML_TEMPLATE = """
         }
         .fade-in {
             animation: fadeIn 0.3s ease-out;
-        }
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        .shimmer {
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            background-size: 1000px 100%;
-            animation: shimmer 2s infinite;
         }
     </style>
 </head>
@@ -141,8 +131,7 @@ HTML_TEMPLATE = """
                         
                         updated[username] = {
                             ...user,
-                            status: isOnline ? 'ONLINE' : 'OFFLINE',
-                            elapsedTime: Math.floor((now - user.startTime) / 1000)
+                            status: isOnline ? 'ONLINE' : 'OFFLINE'
                         };
                         
                         if (isOnline) {
@@ -153,11 +142,11 @@ HTML_TEMPLATE = """
                         
                         try {
                             const diamondStr = user.diamonds;
-                            if (/^\d+$/.test(diamondStr)) {
+                            if (/^\\d+$/.test(diamondStr)) {
                                 totalDiamonds += parseInt(diamondStr);
                             } else if (diamondStr.includes('=')) {
                                 diamondStr.split(',').forEach(pair => {
-                                    const match = pair.match(/=(\d+)/);
+                                    const match = pair.match(/=(\\d+)/);
                                     if (match) totalDiamonds += parseInt(match[1]);
                                 });
                             }
@@ -175,7 +164,7 @@ HTML_TEMPLATE = """
                 });
             };
 
-            const StatCard = ({ title, value, color, gradient }) => (
+            const StatCard = ({ title, value, gradient }) => (
                 <div className={`relative overflow-hidden rounded-2xl p-6 ${gradient} backdrop-blur-sm`}>
                     <div className="relative z-10">
                         <div className="text-sm font-medium text-white/70 uppercase tracking-wider mb-2">
@@ -192,7 +181,6 @@ HTML_TEMPLATE = """
             return (
                 <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
                     <div className="max-w-7xl mx-auto">
-                        {/* Header */}
                         <div className="mb-8 fade-in">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
@@ -219,7 +207,6 @@ HTML_TEMPLATE = """
                             </div>
                         </div>
 
-                        {/* Stats Grid */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 fade-in">
                             <StatCard
                                 title="Total Accounts"
@@ -243,7 +230,6 @@ HTML_TEMPLATE = """
                             />
                         </div>
 
-                        {/* Main Table */}
                         <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl fade-in">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
@@ -271,11 +257,10 @@ HTML_TEMPLATE = """
                                                 </td>
                                             </tr>
                                         ) : (
-                                            Object.values(users).map((user, index) => (
+                                            Object.values(users).map((user) => (
                                                 <tr 
                                                     key={user.username}
                                                     className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-all duration-200"
-                                                    style={{ animationDelay: `${index * 50}ms` }}
                                                 >
                                                     <td className="px-6 py-4">
                                                         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
@@ -307,7 +292,6 @@ HTML_TEMPLATE = """
                             </div>
                         </div>
 
-                        {/* Footer */}
                         <div className="mt-6 text-center">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-400 text-xs font-medium">
                                 <span>Last updated: {lastUpdate || '--:--:--'}</span>
@@ -338,7 +322,6 @@ def receive_data():
         username = data.get("username", "Unknown")
         diamonds = data.get("diamonds", 0)
         
-        # บันทึกข้อมูลพร้อมเวลาอัปเดตล่าสุด
         data_storage[username] = {
             "diamonds": diamonds,
             "timestamp": time.time()
@@ -353,13 +336,11 @@ def receive_data():
 def get_data():
     now = time.time()
     
-    # ลบผู้ใช้ที่ไม่ได้อัปเดตเกิน TIMEOUT วินาที
     expired_users = [user for user, info in data_storage.items() if now - info["timestamp"] > TIMEOUT]
     for user in expired_users:
         print(f"[OFFLINE] Removed {user} (timeout)")
         del data_storage[user]
     
-    # ส่งข้อมูลเฉพาะ user ที่ยังออนไลน์
     result = []
     for user, info in data_storage.items():
         result.append({
