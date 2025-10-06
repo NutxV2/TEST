@@ -20,13 +20,26 @@ HTML_TEMPLATE = """
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { margin: 0; padding: 0; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        body { 
+            margin: 0; 
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-        .animate-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
         }
     </style>
 </head>
@@ -162,130 +175,129 @@ HTML_TEMPLATE = """
                 });
             };
 
-            const formatTime = (seconds) => {
-                if (!seconds) return '0s';
-                if (seconds < 60) return `${seconds}s`;
-                if (seconds < 3600) {
-                    const mins = Math.floor(seconds / 60);
-                    const secs = seconds % 60;
-                    return `${mins}m ${secs}s`;
-                }
-                const hours = Math.floor(seconds / 3600);
-                const mins = Math.floor((seconds % 3600) / 60);
-                return `${hours}h ${mins}m`;
-            };
-
-            const StatCard = ({ icon, title, value, color, borderColor }) => (
-                <div className={`bg-zinc-900 rounded-xl p-6 border-2 ${borderColor} flex-1 min-w-0 backdrop-blur-sm bg-opacity-50`}>
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-zinc-400 text-sm font-medium uppercase tracking-wider">
+            const StatCard = ({ title, value, color, gradient }) => (
+                <div className={`relative overflow-hidden rounded-2xl p-6 ${gradient} backdrop-blur-sm`}>
+                    <div className="relative z-10">
+                        <div className="text-sm font-medium text-white/70 uppercase tracking-wider mb-2">
                             {title}
-                        </span>
-                        <span className="text-2xl">{icon}</span>
+                        </div>
+                        <div className="text-4xl font-bold text-white">
+                            {value.toLocaleString()}
+                        </div>
                     </div>
-                    <div className={`text-4xl font-bold ${color}`}>
-                        {value.toLocaleString()}
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
                 </div>
             );
 
             return (
-                <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 p-6">
+                <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
                     <div className="max-w-7xl mx-auto">
-                        <div className="mb-8">
-                            <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                                <span className="text-4xl">💎</span>
-                                Diamond Monitor
-                            </h1>
-                            <p className="text-zinc-400">Real-time monitoring dashboard</p>
+                        {/* Header */}
+                        <div className="mb-8 fade-in">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
+                                        Diamond Monitor
+                                    </h1>
+                                    <p className="text-slate-400 text-sm md:text-base">Real-time monitoring dashboard</p>
+                                </div>
+                                <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full ${
+                                    connectionStatus === 'connected'
+                                        ? 'bg-emerald-500/20 text-emerald-400'
+                                        : connectionStatus === 'error'
+                                        ? 'bg-rose-500/20 text-rose-400'
+                                        : 'bg-slate-700/50 text-slate-400'
+                                }`}>
+                                    <div className={`w-2 h-2 rounded-full ${
+                                        connectionStatus === 'connected' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'
+                                    }`}></div>
+                                    <span className="text-sm font-medium">
+                                        {connectionStatus === 'connected' ? 'Connected' : 
+                                         connectionStatus === 'error' ? 'Error' : 'Connecting'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 fade-in">
                             <StatCard
-                                icon="👥"
-                                title="Accounts"
+                                title="Total Accounts"
                                 value={stats.total}
-                                color="text-purple-500"
-                                borderColor="border-purple-500"
+                                gradient="bg-gradient-to-br from-violet-600/20 to-purple-600/20 border border-violet-500/30"
                             />
                             <StatCard
-                                icon="✅"
                                 title="Online"
                                 value={stats.online}
-                                color="text-green-400"
-                                borderColor="border-green-400"
+                                gradient="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30"
                             />
                             <StatCard
-                                icon="❌"
                                 title="Offline"
                                 value={stats.offline}
-                                color="text-red-400"
-                                borderColor="border-red-400"
+                                gradient="bg-gradient-to-br from-rose-600/20 to-pink-600/20 border border-rose-500/30"
                             />
                             <StatCard
-                                icon="💎"
-                                title="Diamonds"
+                                title="Total Diamonds"
                                 value={stats.diamonds}
-                                color="text-blue-400"
-                                borderColor="border-blue-400"
+                                gradient="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/30"
                             />
                         </div>
 
-                        <div className="bg-zinc-900 rounded-xl overflow-hidden border border-zinc-800 shadow-2xl">
+                        {/* Main Table */}
+                        <div className="bg-slate-900/50 backdrop-blur-xl rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl fade-in">
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="bg-zinc-800 border-b-2 border-zinc-700">
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                                        <tr className="bg-slate-800/80 border-b border-slate-700/50">
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Status
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                                                User
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                                Username
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">
-                                                Time
-                                            </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Diamonds
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-zinc-800">
+                                    <tbody>
                                         {Object.values(users).length === 0 ? (
                                             <tr>
-                                                <td colSpan="4" className="px-6 py-12 text-center text-zinc-500">
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <span className="text-4xl animate-pulse">📡</span>
-                                                        <span>Waiting for data...</span>
+                                                <td colSpan="3" className="px-6 py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-4">
+                                                        <div className="w-16 h-16 border-4 border-slate-700 border-t-cyan-500 rounded-full animate-spin"></div>
+                                                        <span className="text-slate-500 text-sm font-medium">Waiting for data...</span>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ) : (
-                                            Object.values(users).map((user) => (
+                                            Object.values(users).map((user, index) => (
                                                 <tr 
                                                     key={user.username}
-                                                    className="hover:bg-zinc-800 transition-colors duration-150"
+                                                    className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-all duration-200"
+                                                    style={{ animationDelay: `${index * 50}ms` }}
                                                 >
                                                     <td className="px-6 py-4">
-                                                        <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${
+                                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
                                                             user.status === 'ONLINE' 
-                                                                ? 'bg-green-500 bg-opacity-20 text-green-400' 
-                                                                : 'bg-red-500 bg-opacity-20 text-red-400'
+                                                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                                                         }`}>
-                                                            <span className={`w-2 h-2 rounded-full ${
-                                                                user.status === 'ONLINE' ? 'bg-green-400' : 'bg-red-400'
-                                                            } ${user.status === 'ONLINE' ? 'animate-pulse' : ''}`}></span>
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                                user.status === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                                                            }`}></div>
                                                             {user.status}
-                                                        </span>
+                                                        </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-white font-medium">
-                                                        {user.username}
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-white font-medium text-sm">
+                                                            {user.username}
+                                                        </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-zinc-400 font-mono">
-                                                        {formatTime(user.elapsedTime)}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-yellow-400 font-bold">
-                                                        {user.diamonds}
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-cyan-400 font-bold text-sm">
+                                                            {user.diamonds}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -295,23 +307,11 @@ HTML_TEMPLATE = """
                             </div>
                         </div>
 
-                        <div className={`mt-6 px-6 py-4 rounded-xl text-center text-sm font-medium transition-all duration-300 ${
-                            connectionStatus === 'connected'
-                                ? 'bg-green-950 bg-opacity-50 text-green-400 border border-green-800'
-                                : connectionStatus === 'error'
-                                ? 'bg-red-950 bg-opacity-50 text-red-400 border border-red-800'
-                                : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
-                        }`}>
-                            {connectionStatus === 'connected' ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                                    Connected • Last updated: {lastUpdate}
-                                </span>
-                            ) : connectionStatus === 'error' ? (
-                                'Connection error - Retrying...'
-                            ) : (
-                                'Connecting to server...'
-                            )}
+                        {/* Footer */}
+                        <div className="mt-6 text-center">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-400 text-xs font-medium">
+                                <span>Last updated: {lastUpdate || '--:--:--'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
