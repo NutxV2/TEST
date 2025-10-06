@@ -321,13 +321,16 @@ def receive_data():
         
         username = data.get("username", "Unknown")
         diamonds = data.get("diamonds", 0)
-        
+        device = data.get("device", "Unknown")  # ✅ เพิ่มบรรทัดนี้
+
+        # ✅ เก็บข้อมูลใน data_storage
         data_storage[username] = {
             "diamonds": diamonds,
+            "device": device,       # ✅ เพิ่มค่า device เข้า table
             "timestamp": time.time()
         }
-        
-        print(f"[UPDATE] {username}: {diamonds}")
+
+        print(f"[UPDATE] {username} ({device}): {diamonds}")
         return jsonify({"status": "success", "message": "Data received!"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -335,22 +338,25 @@ def receive_data():
 @app.route("/get_data", methods=["GET"])
 def get_data():
     now = time.time()
-    
+
+    # ลบผู้ใช้ที่หมดเวลา (offline)
     expired_users = [user for user, info in data_storage.items() if now - info["timestamp"] > TIMEOUT]
     for user in expired_users:
         print(f"[OFFLINE] Removed {user} (timeout)")
         del data_storage[user]
-    
+
     result = []
     for user, info in data_storage.items():
         result.append({
             "username": user,
             "diamonds": info["diamonds"],
+            "device": info.get("device", "Unknown"),  # ✅ เพิ่ม device กลับไปใน response
             "status": "ONLINE"
         })
-    
+
     return jsonify(result)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
