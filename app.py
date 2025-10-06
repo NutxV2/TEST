@@ -256,7 +256,7 @@ HTML_TEMPLATE = """
                                     <tbody>
                                         {Object.values(users).length === 0 ? (
                                             <tr>
-                                                <td colSpan="3" className="px-6 py-16 text-center">
+                                                <td colSpan="4" className="px-6 py-16 text-center">
                                                     <div className="flex flex-col items-center gap-4">
                                                         <div className="w-16 h-16 border-4 border-slate-700 border-t-cyan-500 rounded-full animate-spin"></div>
                                                         <span className="text-slate-500 text-sm font-medium">Waiting for data...</span>
@@ -374,3 +374,4 @@ def get_data():
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+
