@@ -1,39 +1,36 @@
 from flask import Flask, request, jsonify, render_template_string
+from flask_cors import CORS
 import time
 import os
 import json
-from pathlib import Path
+import sqlite3
 
 app = Flask(__name__)
+CORS(app)  # เพิ่ม CORS support
 
-# เก็บข้อมูลผู้ใช้ในหน่วยความจำ
-data_storage = {}
-TIMEOUT = 10
-DATA_FILE = "diamond_data.json"
+# ค่า Timeout แบบรวมศูนย์
+TIMEOUT = 30
+DB_FILE = "diamond_data.db"
 
-# โหลดข้อมูลเก่า (ถ้ามี)
-def load_data():
-    global data_storage
-    if Path(DATA_FILE).exists():
-        try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                data_storage = json.load(f)
-            print(f"[LOADED] {len(data_storage)} accounts from {DATA_FILE}")
-        except Exception as e:
-            print(f"[ERROR] Failed to load data: {e}")
-            data_storage = {}
+def get_db_connection():
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# บันทึกข้อมูล
-def save_data():
-    try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data_storage, f, ensure_ascii=False, indent=2)
-        print(f"[SAVED] {len(data_storage)} accounts to {DATA_FILE}")
-    except Exception as e:
-        print(f"[ERROR] Failed to save data: {e}")
+def init_db():
+    conn = get_db_connection()
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        username TEXT PRIMARY KEY,
+        diamonds TEXT,
+        device TEXT,
+        timestamp REAL
+    )
+    """)
+    conn.commit()
+    conn.close()
 
-# เรียกใช้ตอนเริ่มต้น
-load_data()
+init_db()
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -77,10 +74,8 @@ HTML_TEMPLATE = """
                 diamonds: 0
             });
             const [deviceStats, setDeviceStats] = useState({});
-            const [showDeleteModal, setShowDeleteModal] = useState(false);
-            const [deleteTarget, setDeleteTarget] = useState(null);
 
-            const STATUS_TIMEOUT = 10000;
+            const STATUS_TIMEOUT = 30000; // ต้องตรงกับ Python TIMEOUT
 
             useEffect(() => {
                 const fetchInterval = setInterval(fetchData, 2000);
@@ -118,14 +113,15 @@ HTML_TEMPLATE = """
                                     device,
                                     startTime: now,
                                     lastUpdate: now,
-                                    status: 'ONLINE'
+                                    status: data.status || 'OFFLINE'
                                 };
                             } else {
                                 updatedUsers[username] = {
                                     ...updatedUsers[username],
                                     diamonds,
                                     device,
-                                    lastUpdate: now
+                                    lastUpdate: now,
+                                    status: data.status || 'OFFLINE'
                                 };
                             }
                         });
@@ -140,12 +136,19 @@ HTML_TEMPLATE = """
             };
 
             const formatDiamonds = (diamonds) => {
-                if (typeof diamonds === 'object' && diamonds !== null) {
-                    return Object.entries(diamonds)
-                        .map(([k, v]) => `${k}=${v}`)
-                        .join(', ');
+                try {
+                    // ลองแปลงจาก JSON string
+                    const parsed = JSON.parse(diamonds);
+                    if (typeof parsed === 'object' && parsed !== null) {
+                        return Object.entries(parsed)
+                            .map(([k, v]) => `${k}=${v}`)
+                            .join(', ');
+                    }
+                    return String(parsed || 0);
+                } catch (e) {
+                    // ถ้าไม่ใช่ JSON ให้แสดงแบบธรรมดา
+                    return String(diamonds || 0);
                 }
-                return String(diamonds || 0);
             };
 
             const updateTimeAndStatus = () => {
@@ -178,15 +181,18 @@ HTML_TEMPLATE = """
                         let userDiamonds = 0;
                         try {
                             const diamondStr = user.diamonds;
-                            if (/^\\d+$/.test(diamondStr)) {
+                            // แก้ไข regex ให้ถูกต้อง
+                            if (/^\d+$/.test(diamondStr)) {
                                 userDiamonds = parseInt(diamondStr);
                             } else if (diamondStr.includes('=')) {
                                 diamondStr.split(',').forEach(pair => {
-                                    const match = pair.match(/=(\\d+)/);
+                                    const match = pair.match(/=(\d+)/);
                                     if (match) userDiamonds += parseInt(match[1]);
                                 });
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            console.error('Error parsing diamonds:', e);
+                        }
                         
                         totalDiamonds += userDiamonds;
                         
@@ -227,6 +233,8 @@ HTML_TEMPLATE = """
                         body: JSON.stringify({ username })
                     });
                     
+                    const result = await response.json();
+                    
                     if (response.ok) {
                         setUsers(prev => {
                             const updated = { ...prev };
@@ -234,6 +242,8 @@ HTML_TEMPLATE = """
                             return updated;
                         });
                         alert('ลบสำเร็จ!');
+                    } else {
+                        alert('เกิดข้อผิดพลาด: ' + result.message);
                     }
                 } catch (error) {
                     alert('เกิดข้อผิดพลาด: ' + error.message);
@@ -250,7 +260,25 @@ HTML_TEMPLATE = """
                     
                     if (response.ok) {
                         setUsers({});
+                        setDeviceStats({});
                         alert('ลบข้อมูลทั้งหมดแล้ว!');
+                    }
+                } catch (error) {
+                    alert('เกิดข้อผิดพลาด: ' + error.message);
+                }
+            };
+
+            const handleCleanupOffline = async () => {
+                if (!confirm('ต้องการลบข้อมูลที่ออฟไลน์ใช่หรือไม่?')) return;
+                
+                try {
+                    const response = await fetch('/cleanup_offline', {
+                        method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                        fetchData();
+                        alert('ลบข้อมูล offline แล้ว!');
                     }
                 } catch (error) {
                     alert('เกิดข้อผิดพลาด: ' + error.message);
@@ -308,6 +336,12 @@ HTML_TEMPLATE = """
                                     <p className="text-slate-400 text-sm md:text-base">Real-time monitoring dashboard</p>
                                 </div>
                                 <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={handleCleanupOffline}
+                                        className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/50 text-orange-400 rounded-lg text-sm font-medium transition-all duration-200"
+                                    >
+                                        🧹 Clean Offline
+                                    </button>
                                     <button
                                         onClick={handleDeleteAll}
                                         className="px-4 py-2 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 rounded-lg text-sm font-medium transition-all duration-200"
@@ -402,48 +436,55 @@ HTML_TEMPLATE = """
                                                 </td>
                                             </tr>
                                         ) : (
-                                            Object.values(users).map((user) => (
-                                                <tr 
-                                                    key={user.username}
-                                                    className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-all duration-200"
-                                                >
-                                                    <td className="px-6 py-4">
-                                                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                                                            user.status === 'ONLINE' 
-                                                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                                                                : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                                                        }`}>
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${
-                                                                user.status === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                                                            }`}></div>
-                                                            {user.status}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-slate-300 font-medium text-sm">
-                                                            {user.device || "Unknown"}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-white font-medium text-sm">
-                                                            {user.username}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="text-cyan-400 font-bold text-sm">
-                                                            {user.diamonds}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <button
-                                                            onClick={() => handleDeleteUser(user.username)}
-                                                            className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 rounded-lg text-xs font-medium transition-all duration-200"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                            Object.values(users)
+                                                .sort((a, b) => {
+                                                    if (a.status !== b.status) {
+                                                        return a.status === 'ONLINE' ? -1 : 1;
+                                                    }
+                                                    return a.username.localeCompare(b.username);
+                                                })
+                                                .map((user) => (
+                                                    <tr 
+                                                        key={user.username}
+                                                        className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-all duration-200"
+                                                    >
+                                                        <td className="px-6 py-4">
+                                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                                                user.status === 'ONLINE' 
+                                                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                                                                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                                            }`}>
+                                                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                                                    user.status === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                                                                }`}></div>
+                                                                {user.status}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-slate-300 font-medium text-sm">
+                                                                {user.device || "Unknown"}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-white font-medium text-sm">
+                                                                {user.username}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-cyan-400 font-bold text-sm">
+                                                                {user.diamonds}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <button
+                                                                onClick={() => handleDeleteUser(user.username)}
+                                                                className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 rounded-lg text-xs font-medium transition-all duration-200"
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
                                         )}
                                     </tbody>
                                 </table>
@@ -453,6 +494,8 @@ HTML_TEMPLATE = """
                         <div className="mt-6 text-center">
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 border border-slate-700/50 text-slate-400 text-xs font-medium">
                                 <span>Last updated: {lastUpdate || '--:--:--'}</span>
+                                <span>•</span>
+                                <span>Timeout: {STATUS_TIMEOUT / 1000}s</span>
                             </div>
                         </div>
                     </div>
@@ -480,40 +523,53 @@ def receive_data():
         username = data.get("username", "Unknown")
         diamonds = data.get("diamonds", 0)
         device = data.get("device", "Unknown")
+        timestamp = time.time()
 
-        data_storage[username] = {
-            "diamonds": diamonds,
-            "device": device,
-            "timestamp": time.time()
-        }
+        # แปลง diamonds เป็น JSON string ถ้าเป็น dict/list
+        if isinstance(diamonds, (dict, list)):
+            diamonds = json.dumps(diamonds)
+        else:
+            diamonds = str(diamonds)
 
-        # บันทึกทุกครั้งที่มีข้อมูลใหม่
-        save_data()
+        conn = get_db_connection()
+        conn.execute("""
+        INSERT INTO users (username, diamonds, device, timestamp)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(username) DO UPDATE SET
+            diamonds=excluded.diamonds,
+            device=excluded.device,
+            timestamp=excluded.timestamp
+        """, (username, diamonds, device, timestamp))
+        conn.commit()
+        conn.close()
 
         print(f"[UPDATE] {username} ({device}): {diamonds}")
         return jsonify({"status": "success", "message": "Data received!"})
     except Exception as e:
+        print(f"[ERROR] {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/get_data", methods=["GET"])
 def get_data():
     now = time.time()
 
-    # ลบผู้ใช้ที่หมดเวลา (offline)
-    expired_users = [user for user, info in data_storage.items() if now - info["timestamp"] > TIMEOUT]
-    for user in expired_users:
-        print(f"[OFFLINE] Removed {user} (timeout)")
-        del data_storage[user]
+    conn = get_db_connection()
+    users = conn.execute("SELECT * FROM users").fetchall()
+    conn.close()
 
     result = []
-    for user, info in data_storage.items():
+    for user in users:
+        time_diff = now - user["timestamp"]
+        status = "ONLINE" if time_diff <= TIMEOUT else "OFFLINE"
+        
         result.append({
-            "username": user,
-            "diamonds": info["diamonds"],
-            "device": info.get("device", "Unknown"),
-            "status": "ONLINE"
+            "username": user["username"],
+            "diamonds": user["diamonds"],
+            "device": user["device"],
+            "status": status,
+            "last_seen": int(time_diff)
         })
-
+    
     return jsonify(result)
 
 @app.route("/delete_user", methods=["POST"])
@@ -522,26 +578,60 @@ def delete_user():
         data = request.json
         username = data.get("username")
         
-        if username in data_storage:
-            del data_storage[username]
-            save_data()
+        if not username:
+            return jsonify({"status": "error", "message": "Username required"}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.execute("DELETE FROM users WHERE username=?", (username,))
+        conn.commit()
+        conn.close()
+        
+        if cursor.rowcount:
             print(f"[DELETED] User: {username}")
             return jsonify({"status": "success", "message": f"Deleted {username}"})
         else:
             return jsonify({"status": "error", "message": "User not found"}), 404
     except Exception as e:
+        print(f"[ERROR] {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/delete_all", methods=["POST"])
 def delete_all():
     try:
-        data_storage.clear()
-        save_data()
+        conn = get_db_connection()
+        conn.execute("DELETE FROM users")
+        conn.commit()
+        conn.close()
         print("[DELETED] All data cleared")
         return jsonify({"status": "success", "message": "All data deleted"})
     except Exception as e:
+        print(f"[ERROR] {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/cleanup_offline", methods=["POST"])
+def cleanup_offline():
+    """ลบข้อมูลที่ออฟไลน์เกิน TIMEOUT"""
+    try:
+        now = time.time()
+        cutoff = now - TIMEOUT
+        
+        conn = get_db_connection()
+        cursor = conn.execute("DELETE FROM users WHERE timestamp < ?", (cutoff,))
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        print(f"[CLEANUP] Removed {deleted_count} offline users")
+        return jsonify({
+            "status": "success", 
+            "message": f"Removed {deleted_count} offline users"
+        })
+    except Exception as e:
+        print(f"[ERROR] {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
+    print(f"🚀 Starting Diamond Monitor on port {port}")
+    print(f"⏱️  Timeout set to {TIMEOUT} seconds")
     app.run(host="0.0.0.0", port=port, debug=False)
