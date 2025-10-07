@@ -126,18 +126,27 @@ HTML_TEMPLATE = """
 
         const UserRow = memo(({ user, onDelete }) => (
             <tr className="user-row border-b border-slate-800/50 hover:bg-slate-800/30 transition-all duration-200">
-                <td className="px-6 py-4">
-                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
-                        user.status === 'ONLINE' 
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                            : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                    }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full text-center ${
-                            user.status === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
-                        }`}></div>
-                        {user.status}
+                <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center items-center">
+                        <div
+                            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                                user.status === 'ONLINE'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                            }`}
+                        >
+                            <div
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                    user.status === 'ONLINE'
+                                        ? 'bg-emerald-400 animate-pulse'
+                                        : 'bg-rose-400'
+                                }`}
+                            ></div>
+                            {user.status}
+                        </div>
                     </div>
                 </td>
+
                 <td className="px-6 py-4">
                     <div className="text-slate-300 font-medium text-center text-sm">
                         {user.device || "Unknown"}
@@ -153,13 +162,15 @@ HTML_TEMPLATE = """
                         {user.diamonds}
                     </div>
                 </td>
-                <td className="px-6 py-4">
-                    <button
-                        onClick={() => onDelete(user.username)}
-                        className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 rounded-lg text-xs font-medium transition-all duration-200"
-                    >
-                        Delete
-                    </button>
+                <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center items-center">
+                        <button
+                            onClick={() => onDelete(user.username)}
+                            className="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 rounded-lg text-xs font-medium transition-all duration-200"
+                        >
+                            Delete
+                        </button>
+                    </div>
                 </td>
             </tr>
         ));
@@ -378,8 +389,8 @@ HTML_TEMPLATE = """
                         <div className="mb-8 fade-in">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
-                                        Diamond Monitor
+                                    <h1 className="text-4xl md:text-5xl uppercase font-bold text-white mb-2 tracking-tight">
+                                        99 NIGHT
                                     </h1>
                                     <p className="text-slate-400 text-sm md:text-base">Real-time monitoring dashboard</p>
                                 </div>
