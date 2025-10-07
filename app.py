@@ -16,8 +16,9 @@ TIMEOUT = 30
 CACHE_TTL = 1  # Cache for 1 second
 
 # ✅ Supabase Configuration - แก้ไขตรงนี้
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://mblreswgwqasjfztuqeu.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_secret_28aGuNexAOODgzwAitFh9w_9v1RCodd")
+SUPABASE_URL = os.environ.get("https://mblreswgwqasjfztuqeu.supabase.coอ")
+SUPABASE_KEY = os.environ.get("sb_secret_28aGuNexAOODgzwAitFh9w_9v1RCodd")
+
 
 # Initialize Supabase client
 try:
@@ -89,7 +90,7 @@ HTML_TEMPLATE = """
 
     <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo, memo } = React;
-
+        const dataList = Array.isArray(await response.json()) ? await response.json() : [];
         const StatCard = memo(({ title, value, gradient }) => (
             <div className={`stat-card relative overflow-hidden rounded-2xl p-6 ${gradient} backdrop-blur-sm`}>
                 <div className="relative z-10">
@@ -601,8 +602,8 @@ def receive_data():
 @app.route("/get_data", methods=["GET"])
 def get_data():
     if not supabase:
-        return jsonify({"status": "error", "message": "Supabase not initialized"}), 500
-    
+        return jsonify([]), 200  # คืน array ว่างแทน error
+
     now = time.time()
     
     if _cache['data'] and (now - _cache['timestamp']) < CACHE_TTL:
@@ -610,17 +611,17 @@ def get_data():
 
     try:
         response = supabase.table(TABLE_NAME).select("*").execute()
-        users = response.data
+        users = response.data or []
 
         result = []
         for user in users:
-            time_diff = now - user["timestamp"]
+            time_diff = now - user.get("timestamp", now)
             status = "ONLINE" if time_diff <= TIMEOUT else "OFFLINE"
             
             result.append({
-                "username": user["username"],
-                "diamonds": user["diamonds"],
-                "device": user["device"],
+                "username": user.get("username", "Unknown"),
+                "diamonds": user.get("diamonds", "0"),
+                "device": user.get("device", "Unknown"),
                 "status": status,
                 "last_seen": int(time_diff)
             })
@@ -631,7 +632,8 @@ def get_data():
         return jsonify(result)
     except Exception as e:
         print(f"[ERROR] {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify([]), 200  # คืน array ว่างแทน error
+
 
 @app.route("/delete_user", methods=["POST"])
 def delete_user():
