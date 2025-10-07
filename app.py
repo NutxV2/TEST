@@ -6,7 +6,7 @@ import json
 from functools import lru_cache
 from datetime import datetime
 import gzip
-from supabase import create_client, Client
+from supabase import create_client
 
 app = Flask(__name__)
 CORS(app)
@@ -23,7 +23,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     raise RuntimeError("Supabase URL หรือ Key ไม่ถูกตั้งค่าใน Environment Variables")
 
 # Initialize Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Table name in Supabase
 TABLE_NAME = "users"
