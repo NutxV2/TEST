@@ -266,15 +266,13 @@ HTML_TEMPLATE = """
                             
                             let userDiamonds = 0;
                             const diamondStr = user.diamonds;
+
                             if (/^\d+$/.test(diamondStr)) {
                                 userDiamonds = parseInt(diamondStr, 10);
                             } else if (diamondStr.includes('=')) {
-                                const matches = diamondStr.matchAll(/=(\d+)/g);
-                                for (const match of matches) {
-                                    userDiamonds += parseInt(match[1], 10);
-                                }
-                            }
-                            
+                                const matches = [...diamondStr.matchAll(/=(\d+)/g)];
+                                userDiamonds = matches.reduce((sum, m) => sum + parseInt(m[1], 10), 0);
+                            }                
                             totalDiamonds += userDiamonds;
                             
                             const device = user.device || 'Unknown';
