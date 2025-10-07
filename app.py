@@ -3,48 +3,55 @@ from flask_cors import CORS
 import time
 import os
 import json
-import sqlite3
 from functools import lru_cache
 from datetime import datetime
 import gzip
+from supabase import create_client, Client
 
 app = Flask(__name__)
 CORS(app)
 
 # Configuration
 TIMEOUT = 30
-DB_FILE = "diamond_data.db"
 CACHE_TTL = 1  # Cache for 1 second
 
-# Thread-safe connection pool
-from threading import Lock
-db_lock = Lock()
+# ✅ Supabase Configuration - แก้ไขตรงนี้
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://mblreswgwqasjfztuqeu.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "sb_secret_28aGuNexAOODgzwAitFh9w_9v1RCodd")
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_FILE, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    # Enable WAL mode for better concurrent access
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA synchronous=NORMAL")
-    conn.execute("PRAGMA cache_size=10000")
-    conn.execute("PRAGMA temp_store=MEMORY")
-    return conn
+# Initialize Supabase client
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    print("✅ Supabase connected successfully")
+except Exception as e:
+    print(f"❌ Supabase connection error: {e}")
+    supabase = None
+
+# Table name
+TABLE_NAME = "users"
 
 def init_db():
-    conn = get_db_connection()
-    conn.execute("""
+    """
+    Create table in Supabase (run this SQL in Supabase SQL Editor):
+    
     CREATE TABLE IF NOT EXISTS users (
         username TEXT PRIMARY KEY,
         diamonds TEXT,
         device TEXT,
-        timestamp REAL
-    )
-    """)
-    # Create index for faster queries
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON users(timestamp)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_device ON users(device)")
-    conn.commit()
-    conn.close()
+        timestamp DOUBLE PRECISION
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_timestamp ON users(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_device ON users(device);
+    """
+    print("📊 Using Supabase database")
+    print(f"🔗 URL: {SUPABASE_URL}")
+    
+    if not supabase:
+        print("⚠️ WARNING: Supabase client not initialized!")
+    
+    if SUPABASE_KEY == "YOUR_SUPABASE_ANON_KEY_HERE":
+        print("⚠️ WARNING: Please set your SUPABASE_KEY!")
 
 init_db()
 
@@ -71,7 +78,6 @@ HTML_TEMPLATE = """
         .fade-in {
             animation: fadeIn 0.3s ease-out;
         }
-        /* Optimize rendering */
         .stat-card, .device-card, .user-row {
             will-change: transform;
             transform: translateZ(0);
@@ -84,7 +90,6 @@ HTML_TEMPLATE = """
     <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo, memo } = React;
 
-        // Memoized components for better performance
         const StatCard = memo(({ title, value, gradient }) => (
             <div className={`stat-card relative overflow-hidden rounded-2xl p-6 ${gradient} backdrop-blur-sm`}>
                 <div className="relative z-10">
@@ -190,7 +195,6 @@ HTML_TEMPLATE = """
             const [sortConfig, setSortConfig] = useState({ key: 'diamonds', direction: 'desc' });
             const STATUS_TIMEOUT = 30000;
 
-            // Optimized fetch with abort controller
             const fetchData = useCallback(async () => {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -209,7 +213,6 @@ HTML_TEMPLATE = """
                     setConnectionStatus('connected');
                     setIsLoading(false);
                     
-                    // Batch update for better performance
                     setUsers(prevUsers => {
                         const updatedUsers = { ...prevUsers };
                         dataList.forEach(data => {
@@ -237,7 +240,6 @@ HTML_TEMPLATE = """
                 }
             }, []);
 
-            // Memoized diamond formatter
             const formatDiamonds = useMemo(() => (diamonds) => {
                 try {
                     const parsed = JSON.parse(diamonds);
@@ -252,7 +254,6 @@ HTML_TEMPLATE = """
                 }
             }, []);
 
-            // Optimized status update with requestAnimationFrame
             const updateTimeAndStatus = useCallback(() => {
                 requestAnimationFrame(() => {
                     const now = Date.now();
@@ -271,7 +272,6 @@ HTML_TEMPLATE = """
                             
                             isOnline ? online++ : offline++;
                             
-                            // Optimized diamond calculation
                             let userDiamonds = 0;
                             const diamondStr = user.diamonds;
                             if (/^\d+$/.test(diamondStr)) {
@@ -307,7 +307,6 @@ HTML_TEMPLATE = """
                 });
             }, [STATUS_TIMEOUT]);
 
-            // Debounced delete handlers
             const handleDeleteUser = useCallback(async (username) => {
                 if (!confirm(`ต้องการลบ ${username} ใช่หรือไม่?`)) return;
                 
@@ -355,7 +354,6 @@ HTML_TEMPLATE = """
                 }
             }, [fetchData]);
 
-            // Optimized intervals
             useEffect(() => {
                 const fetchInterval = setInterval(fetchData, 2000);
                 const updateInterval = setInterval(updateTimeAndStatus, 1000);
@@ -368,7 +366,6 @@ HTML_TEMPLATE = """
                 };
             }, [fetchData, updateTimeAndStatus]);
 
-            // Memoized sorted users
             const sortedUsers = useMemo(() => {
                 const userArray = Object.values(users);
 
@@ -398,8 +395,6 @@ HTML_TEMPLATE = """
                 return userArray;
             }, [users, sortConfig]);
 
-
-            // Memoized device stats array
             const sortedDeviceStats = useMemo(() => {
                 return Object.entries(deviceStats).sort(([a], [b]) => a.localeCompare(b));
             }, [deviceStats]);
@@ -413,7 +408,7 @@ HTML_TEMPLATE = """
                                     <h1 className="text-4xl md:text-5xl uppercase font-bold text-white mb-2 tracking-tight">
                                         99 NIGHT
                                     </h1>
-                                    <p className="text-slate-400 text-sm md:text-base">Real-time monitoring dashboard</p>
+                                    <p className="text-slate-400 text-sm md:text-base">Real-time monitoring dashboard • Powered by Supabase</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <button
@@ -472,7 +467,6 @@ HTML_TEMPLATE = """
 
                         {sortedDeviceStats.length > 0 && (
                             <div className="mb-8 fade-in">
-                                
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {sortedDeviceStats.map(([device, data]) => (
                                         <DeviceCard key={device} device={device} data={data} />
@@ -564,7 +558,6 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# Cache for get_data endpoint
 _cache = {'data': None, 'timestamp': 0}
 
 @app.route("/")
@@ -573,6 +566,9 @@ def index():
 
 @app.route("/send_data", methods=["POST"])
 def receive_data():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase not initialized"}), 500
+    
     try:
         data = request.json
         if not data:
@@ -583,26 +579,18 @@ def receive_data():
         device = data.get("device", "Unknown")
         timestamp = time.time()
 
-        # Convert diamonds to JSON string if dict/list
         if isinstance(diamonds, (dict, list)):
-            diamonds = json.dumps(diamonds, separators=(',', ':'))  # Compact JSON
+            diamonds = json.dumps(diamonds, separators=(',', ':'))
         else:
             diamonds = str(diamonds)
 
-        with db_lock:
-            conn = get_db_connection()
-            conn.execute("""
-            INSERT INTO users (username, diamonds, device, timestamp)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(username) DO UPDATE SET
-                diamonds=excluded.diamonds,
-                device=excluded.device,
-                timestamp=excluded.timestamp
-            """, (username, diamonds, device, timestamp))
-            conn.commit()
-            conn.close()
+        result = supabase.table(TABLE_NAME).upsert({
+            "username": username,
+            "diamonds": diamonds,
+            "device": device,
+            "timestamp": timestamp
+        }).execute()
 
-        # Invalidate cache
         _cache['timestamp'] = 0
 
         return jsonify({"status": "success"}), 200
@@ -612,38 +600,44 @@ def receive_data():
 
 @app.route("/get_data", methods=["GET"])
 def get_data():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase not initialized"}), 500
+    
     now = time.time()
     
-    # Simple cache check
     if _cache['data'] and (now - _cache['timestamp']) < CACHE_TTL:
         return jsonify(_cache['data'])
 
-    with db_lock:
-        conn = get_db_connection()
-        users = conn.execute("SELECT username, diamonds, device, timestamp FROM users").fetchall()
-        conn.close()
+    try:
+        response = supabase.table(TABLE_NAME).select("*").execute()
+        users = response.data
 
-    result = []
-    for user in users:
-        time_diff = now - user["timestamp"]
-        status = "ONLINE" if time_diff <= TIMEOUT else "OFFLINE"
+        result = []
+        for user in users:
+            time_diff = now - user["timestamp"]
+            status = "ONLINE" if time_diff <= TIMEOUT else "OFFLINE"
+            
+            result.append({
+                "username": user["username"],
+                "diamonds": user["diamonds"],
+                "device": user["device"],
+                "status": status,
+                "last_seen": int(time_diff)
+            })
         
-        result.append({
-            "username": user["username"],
-            "diamonds": user["diamonds"],
-            "device": user["device"],
-            "status": status,
-            "last_seen": int(time_diff)
-        })
-    
-    # Update cache
-    _cache['data'] = result
-    _cache['timestamp'] = now
-    
-    return jsonify(result)
+        _cache['data'] = result
+        _cache['timestamp'] = now
+        
+        return jsonify(result)
+    except Exception as e:
+        print(f"[ERROR] {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/delete_user", methods=["POST"])
 def delete_user():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase not initialized"}), 500
+    
     try:
         data = request.json
         username = data.get("username")
@@ -651,32 +645,23 @@ def delete_user():
         if not username:
             return jsonify({"status": "error", "message": "Username required"}), 400
         
-        with db_lock:
-            conn = get_db_connection()
-            cursor = conn.execute("DELETE FROM users WHERE username=?", (username,))
-            conn.commit()
-            conn.close()
-        
-        # Invalidate cache
+        supabase.table(TABLE_NAME).delete().eq("username", username).execute()
         _cache['timestamp'] = 0
         
-        if cursor.rowcount:
-            return jsonify({"status": "success"})
-        else:
-            return jsonify({"status": "error", "message": "User not found"}), 404
+        return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/delete_all", methods=["POST"])
 def delete_all():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase not initialized"}), 500
+    
     try:
-        with db_lock:
-            conn = get_db_connection()
-            conn.execute("DELETE FROM users")
-            conn.commit()
-            conn.close()
+        # ✅ ใช้วิธีที่มีประสิทธิภาพกว่า: ลบด้วย condition ที่ match ทั้งหมด
+        # Supabase ต้องการ filter อย่างน้อย 1 อัน ใช้ timestamp >= 0 (จะ match ทุก record)
+        supabase.table(TABLE_NAME).delete().gte("timestamp", 0).execute()
         
-        # Invalidate cache
         _cache['timestamp'] = 0
         
         return jsonify({"status": "success"})
@@ -685,25 +670,23 @@ def delete_all():
 
 @app.route("/cleanup_offline", methods=["POST"])
 def cleanup_offline():
+    if not supabase:
+        return jsonify({"status": "error", "message": "Supabase not initialized"}), 500
+    
     try:
         now = time.time()
         cutoff = now - TIMEOUT
         
-        with db_lock:
-            conn = get_db_connection()
-            cursor = conn.execute("DELETE FROM users WHERE timestamp < ?", (cutoff,))
-            deleted_count = cursor.rowcount
-            conn.commit()
-            conn.close()
+        # ✅ ลบ offline users โดยตรงด้วย filter
+        result = supabase.table(TABLE_NAME).delete().lt("timestamp", cutoff).execute()
         
-        # Invalidate cache
         _cache['timestamp'] = 0
         
+        deleted_count = len(result.data) if result.data else 0
         return jsonify({"status": "success", "message": f"Removed {deleted_count} offline users"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Compress responses
 @app.after_request
 def compress_response(response):
     if response.status_code < 200 or response.status_code >= 300:
@@ -720,7 +703,7 @@ def compress_response(response):
     response.direct_passthrough = False
     response_data = response.get_data()
     
-    if len(response_data) > 500:  # Only compress if > 500 bytes
+    if len(response_data) > 500:
         gzip_buffer = gzip.compress(response_data, compresslevel=6)
         response.set_data(gzip_buffer)
         response.headers['Content-Encoding'] = 'gzip'
@@ -730,6 +713,7 @@ def compress_response(response):
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    print(f"🚀 Starting Optimized Diamond Monitor on port {port}")
+    print(f"🚀 Starting Diamond Monitor with Supabase on port {port}")
     print(f"⏱️  Timeout: {TIMEOUT}s | Cache TTL: {CACHE_TTL}s")
+    print(f"🗄️  Database: Supabase")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
