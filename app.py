@@ -99,35 +99,34 @@ HTML_TEMPLATE = """
                     setConnectionStatus('connected');
                     
                     setUsers(prevUsers => {
-                        const updatedUsers = { ...prevUsers };
-                        
-                        dataList.forEach(data => {
-                            const username = data.username || 'Unknown';
-                            const diamonds = formatDiamonds(data.diamonds);
-                            const device = data.device || 'Unknown';
+                    const updatedUsers = { ...prevUsers };
+                    dataList.forEach(data => {
+                        const username = data.username || 'Unknown';
+                        const diamonds = formatDiamonds(data.diamonds);
+                        const device = data.device || 'Unknown';
+                        const last_seen = data.last_seen; // วินาทีที่ server บอกว่า last update
 
-                            if (!updatedUsers[username]) {
-                                updatedUsers[username] = {
-                                    username,
-                                    diamonds,
-                                    device,
-                                    startTime: now,
-                                    lastUpdate: now,
-                                    status: data.status || 'OFFLINE'
-                                };
-                            } else {
-                                updatedUsers[username] = {
-                                    ...updatedUsers[username],
-                                    diamonds,
-                                    device,
-                                    lastUpdate: now,
-                                    status: data.status || 'OFFLINE'
-                                };
-                            }
-                        });
-                        
-                        return updatedUsers;
+                        if (!updatedUsers[username]) {
+                            updatedUsers[username] = {
+                                username,
+                                diamonds,
+                                device,
+                                lastUpdate: Date.now() - last_seen * 1000, // convert เป็น timestamp
+                                status: data.status || 'OFFLINE'
+                            };
+                        } else {
+                            updatedUsers[username] = {
+                                ...updatedUsers[username],
+                                diamonds,
+                                device,
+                                lastUpdate: Date.now() - last_seen * 1000,
+                                status: data.status || 'OFFLINE'
+                            };
+                        }
                     });
+                    return updatedUsers;
+                });
+
                     
                 } catch (error) {
                     setConnectionStatus('error');
@@ -392,6 +391,7 @@ HTML_TEMPLATE = """
 
                         {Object.keys(deviceStats).length > 0 && (
                             <div className="mb-8 fade-in">
+                                <h2 className="text-2xl font-bold text-white mb-4">Device Summary</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {Object.entries(deviceStats)
                                         .sort(([a], [b]) => a.localeCompare(b))
@@ -634,4 +634,3 @@ if __name__ == "__main__":
     print(f"🚀 Starting Diamond Monitor on port {port}")
     print(f"⏱️  Timeout set to {TIMEOUT} seconds")
     app.run(host="0.0.0.0", port=port, debug=False)
-
