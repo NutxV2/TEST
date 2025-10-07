@@ -407,19 +407,19 @@ HTML_TEMPLATE = """
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-slate-800/80 border-b border-slate-700/50">
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Status
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Device
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Username
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Diamonds
                                             </th>
-                                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Actions
                                             </th>
                                         </tr>
@@ -453,24 +453,24 @@ HTML_TEMPLATE = """
                                                                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                                                                     : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
                                                             }`}>
-                                                                <div className={`w-1.5 h-1.5 rounded-full ${
+                                                                <div className={`w-1.5 h-1.5 rounded-full text-center ${
                                                                     user.status === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
                                                                 }`}></div>
                                                                 {user.status}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <div className="text-slate-300 font-medium text-sm">
+                                                            <div className="text-slate-300 font-medium text-center text-sm">
                                                                 {user.device || "Unknown"}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <div className="text-white font-medium text-sm">
+                                                            <div className="text-white font-medium text-center text-sm">
                                                                 {user.username}
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <div className="text-cyan-400 font-bold text-sm">
+                                                            <div className="text-cyan-400 font-bold text-center text-sm">
                                                                 {user.diamonds}
                                                             </div>
                                                         </td>
