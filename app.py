@@ -48,7 +48,7 @@ def init_db():
 
 init_db()
 
-HTML_TEMPLATE = r"""
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -401,6 +401,36 @@ HTML_TEMPLATE = r"""
                                     <p className="text-slate-400 text-sm md:text-base">Real-time monitoring dashboard • Powered by Supabase</p>
                                 </div>
                                 <div className="flex items-center gap-3">
+
+                                    <input
+                                        type="text"
+                                        id="sheetUrl"
+                                        placeholder="ใส่ URL ของ SheetDB API..."
+                                        className="px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-600/50 text-slate-200 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            const sheetUrl = document.getElementById("sheetUrl").value.trim();
+                                            if (!sheetUrl) {
+                                                alert("กรุณาใส่ URL ของ SheetDB API ก่อน");
+                                                return;
+                                            }
+                                            try {
+                                                const res = await fetch("/export_to_sheet", {
+                                                    method: "POST",
+                                                    headers: { "Content-Type": "application/json" },
+                                                    body: JSON.stringify({ api_url: sheetUrl }),
+                                                });
+                                                const data = await res.json();
+                                                alert(data.message || "ส่งข้อมูลสำเร็จ");
+                                            } catch (err) {
+                                                alert("เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message);
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 rounded-lg text-sm font-medium transition-all duration-200"
+                                    >
+                                        📤 ส่งไปยัง Sheet
+                                    </button>
                                     <button
                                         onClick={handleCleanupOffline}
                                         className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/50 text-orange-400 rounded-lg text-sm font-medium transition-all duration-200"
@@ -675,6 +705,60 @@ def cleanup_offline():
         return jsonify({"status": "success", "message": f"Removed {deleted_count} offline users"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+
+@app.route("/export_to_sheet", methods=["POST"])
+def export_to_sheet():
+    try:
+        import requests
+        
+        data = request.json
+        sheet_api_url = data.get("api_url")
+        
+        if not sheet_api_url:
+            return jsonify({"status": "error", "message": "API URL required"}), 400
+        
+        # Get all users from Supabase
+        response = supabase.table(TABLE_NAME).select("*").execute()
+        users = response.data
+        
+        # Prepare data for SheetDB
+        sheet_data = []
+        for user in users:
+            diamonds_str = user["diamonds"]
+            
+            # Parse diamonds to get total
+            try:
+                parsed = json.loads(diamonds_str)
+                if isinstance(parsed, dict):
+                    total = sum(int(v) for v in parsed.values())
+                else:
+                    total = int(parsed)
+            except:
+                total = 0
+            
+            sheet_data.append({
+                "username": user["username"],
+                "diamonds": str(total)
+            })
+        
+        # Send to SheetDB
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(sheet_api_url, json={"data": sheet_data}, headers=headers)
+        
+        if response.status_code in [200, 201]:
+            return jsonify({
+                "status": "success", 
+                "message": f"Exported {len(sheet_data)} records to Google Sheet"
+            })
+        else:
+            return jsonify({
+                "status": "error", 
+                "message": f"SheetDB error: {response.text}"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.after_request
 def compress_response(response):
@@ -706,4 +790,3 @@ if __name__ == "__main__":
     print(f"⏱️  Timeout: {TIMEOUT}s | Cache TTL: {CACHE_TTL}s")
     print(f"📊 Supabase URL: {SUPABASE_URL}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
-
