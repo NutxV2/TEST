@@ -187,7 +187,7 @@ HTML_TEMPLATE = """
             });
             const [deviceStats, setDeviceStats] = useState({});
             const [isLoading, setIsLoading] = useState(true);
-
+            const [sortConfig, setSortConfig] = useState({ key: 'diamonds', direction: 'desc' });
             const STATUS_TIMEOUT = 30000;
 
             // Optimized fetch with abort controller
@@ -370,13 +370,34 @@ HTML_TEMPLATE = """
 
             // Memoized sorted users
             const sortedUsers = useMemo(() => {
-                return Object.values(users).sort((a, b) => {
+                const userArray = Object.values(users);
+
+                userArray.sort((a, b) => {
                     if (a.status !== b.status) {
                         return a.status === 'ONLINE' ? -1 : 1;
                     }
+
+                    if (sortConfig.key === 'diamonds') {
+                        const parseDiamonds = (d) => {
+                            let total = 0;
+                            if (/^\d+$/.test(d)) total = parseInt(d, 10);
+                            else if (d.includes('=')) {
+                                const matches = d.matchAll(/=(\d+)/g);
+                                for (const match of matches) total += parseInt(match[1], 10);
+                            }
+                            return total;
+                        };
+                        const aVal = parseDiamonds(a.diamonds);
+                        const bVal = parseDiamonds(b.diamonds);
+                        return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
+                    }
+
                     return a.username.localeCompare(b.username);
                 });
-            }, [users]);
+
+                return userArray;
+            }, [users, sortConfig]);
+
 
             // Memoized device stats array
             const sortedDeviceStats = useMemo(() => {
@@ -474,8 +495,21 @@ HTML_TEMPLATE = """
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Username
                                             </th>
-                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                            <th
+                                                onClick={() => setSortConfig(prev => ({
+                                                    key: 'diamonds',
+                                                    direction: prev.key === 'diamonds' && prev.direction === 'desc' ? 'asc' : 'desc'
+                                                }))}
+                                                className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider cursor-pointer select-none"
+                                            >
                                                 Diamonds
+                                                <span className="ml-1 text-slate-500">
+                                                    {sortConfig.key === 'diamonds'
+                                                        ? sortConfig.direction === 'desc'
+                                                            ? '▼'
+                                                            : '▲'
+                                                        : ''}
+                                                </span>
                                             </th>
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Actions
