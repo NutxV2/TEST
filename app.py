@@ -392,7 +392,6 @@ HTML_TEMPLATE = """
 
                         {Object.keys(deviceStats).length > 0 && (
                             <div className="mb-8 fade-in">
-                                <h2 className="text-2xl font-bold text-white mb-4">Device Summary</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {Object.entries(deviceStats)
                                         .sort(([a], [b]) => a.localeCompare(b))
@@ -635,3 +634,4 @@ if __name__ == "__main__":
     print(f"🚀 Starting Diamond Monitor on port {port}")
     print(f"⏱️  Timeout set to {TIMEOUT} seconds")
     app.run(host="0.0.0.0", port=port, debug=False)
+
