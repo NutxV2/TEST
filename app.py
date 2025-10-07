@@ -48,7 +48,7 @@ def init_db():
 
 init_db()
 
-HTML_TEMPLATE = """
+HTML_TEMPLATE = r"""
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -706,3 +706,4 @@ if __name__ == "__main__":
     print(f"⏱️  Timeout: {TIMEOUT}s | Cache TTL: {CACHE_TTL}s")
     print(f"📊 Supabase URL: {SUPABASE_URL}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+
