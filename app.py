@@ -267,7 +267,7 @@ HTML_TEMPLATE = """
                             let userDiamonds = 0;
                             const diamondStr = user.diamonds;
 
-                            if (/^\d+$/.test(diamondStr)) {
+                            if (/^\\d+$/.test(diamondStr)) {
                                 userDiamonds = parseInt(diamondStr, 10);
                             } else if (diamondStr.includes('=')) {
                                 const matches = [...diamondStr.matchAll(/=(\d+)/g)];
