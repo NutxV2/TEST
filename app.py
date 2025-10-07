@@ -16,8 +16,9 @@ TIMEOUT = 30
 CACHE_TTL = 1  # Cache for 1 second
 
 # ✅ Supabase Configuration - แก้ไขตรงนี้
-SUPABASE_URL = os.environ.get("https://mblreswgwqasjfztuqeu.supabase.coอ")
-SUPABASE_KEY = os.environ.get("sb_secret_28aGuNexAOODgzwAitFh9w_9v1RCodd")
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
 
 
 # Initialize Supabase client
@@ -90,7 +91,6 @@ HTML_TEMPLATE = """
 
     <script type="text/babel">
         const { useState, useEffect, useCallback, useMemo, memo } = React;
-        const dataList = Array.isArray(await response.json()) ? await response.json() : [];
         const StatCard = memo(({ title, value, gradient }) => (
             <div className={`stat-card relative overflow-hidden rounded-2xl p-6 ${gradient} backdrop-blur-sm`}>
                 <div className="relative z-10">
