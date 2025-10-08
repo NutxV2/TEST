@@ -150,12 +150,6 @@ HTML_TEMPLATE = """
                         {user.device || "Unknown"}
                     </div>
                 </td>
-                <td className="px-6 py-4 text-center">
-                    <div className="text-sm text-slate-400 font-medium">
-                        {user.timeElapsed}s
-                    </div>
-                </td>
-
                 <td className="px-6 py-4">
                     <div className="text-white font-medium text-center text-sm">
                         {user.username}
@@ -260,47 +254,41 @@ HTML_TEMPLATE = """
             const updateTimeAndStatus = useCallback(() => {
                 requestAnimationFrame(() => {
                     const now = Date.now();
-
+                    
                     setUsers(prevUsers => {
                         const updated = { ...prevUsers };
                         let online = 0, offline = 0, totalDiamonds = 0;
                         const devStats = {};
-
+                        
                         for (const username in updated) {
                             const user = updated[username];
-                            const timeSinceLastSeen = now - user.lastUpdate;
-                            const isOnline = timeSinceLastSeen <= STATUS_TIMEOUT;
-
-                            // ถ้าสถานะเปลี่ยน รีเซ็ตเวลา
-                            if (user.status !== (isOnline ? 'ONLINE' : 'OFFLINE')) {
-                                user.status = isOnline ? 'ONLINE' : 'OFFLINE';
-                                user.status_changed_at = now;
-                            }
-
-                            // เวลา online/offline ที่นับ
-                            const timeElapsed = Math.floor((now - (user.status_changed_at || now)) / 1000); // วินาที
-                            updated[username] = { ...user, status: user.status, timeElapsed };
-
+                            const timeSinceUpdate = now - user.lastUpdate;
+                            const isOnline = timeSinceUpdate <= STATUS_TIMEOUT;
+                            
+                            updated[username] = { ...user, status: isOnline ? 'ONLINE' : 'OFFLINE' };
+                            
                             isOnline ? online++ : offline++;
-
-                            // คำนวณ Diamonds
+                            
                             let userDiamonds = 0;
                             const diamondStr = user.diamonds;
-                            if (/^\d+$/.test(diamondStr)) {
+
+                            if (/^\\d+$/.test(diamondStr)) {
                                 userDiamonds = parseInt(diamondStr, 10);
                             } else if (diamondStr.includes('=')) {
                                 const matches = [...diamondStr.matchAll(/=(\d+)/g)];
                                 userDiamonds = matches.reduce((sum, m) => sum + parseInt(m[1], 10), 0);
-                            }
+                            }                
                             totalDiamonds += userDiamonds;
-
+                            
                             const device = user.device || 'Unknown';
-                            if (!devStats[device]) devStats[device] = { total: 0, online: 0, diamonds: 0 };
+                            if (!devStats[device]) {
+                                devStats[device] = { total: 0, online: 0, diamonds: 0 };
+                            }
                             devStats[device].total++;
                             if (isOnline) devStats[device].online++;
                             devStats[device].diamonds += userDiamonds;
                         }
-
+                        
                         setStats({
                             total: Object.keys(updated).length,
                             online,
@@ -309,11 +297,19 @@ HTML_TEMPLATE = """
                         });
                         setDeviceStats(devStats);
 
+                        // Calculate diamonds per second
+                        setPrevDiamonds(prev => {
+                            if (prev > 0) {
+                                const diff = totalDiamonds - prev;
+                                setDiamondsPerSecond(diff);
+                            }
+                            return totalDiamonds;
+                        });
+
                         return updated;
                     });
                 });
             }, [STATUS_TIMEOUT]);
-
 
             const handleDeleteUser = useCallback(async (username) => {
                 if (!confirm(`ต้องการลบ ${username} ใช่หรือไม่?`)) return;
@@ -591,9 +587,6 @@ HTML_TEMPLATE = """
                                             </th>
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Device
-                                            </th>
-                                            <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                                                Time
                                             </th>
                                             <th className="px-6 py-4 text-center text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                                 Username
