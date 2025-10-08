@@ -516,12 +516,12 @@ HTML_TEMPLATE = """
                                 value={stats.total}
                                 gradient="bg-gradient-to-br from-violet-600/20 to-purple-600/20 border border-violet-500/30"
                             >
-                                <p className={`text-sm mt-2 flex items-center gap-1 ${
+                                <p className={`text-sm mt-2 flex items-center justify-center gap-1 ${
                                     stats.total > 0 && (stats.online / stats.total) * 100 >= 50 
                                         ? 'text-emerald-400' 
                                         : 'text-rose-400'
                                 }`}>
-                                    {stats.total > 0 && (stats.online / stats.total) * 100 >= 50 ? '↑' : '↓'}
+                                    {stats.total > 0 && (stats.online / stats.total) * 100 >= 50 ? '↗' : '↘'}
                                     {stats.total > 0 ? `${((stats.online / stats.total) * 100).toFixed(1)}%` : '0%'} Active
                                 </p>
                             </StatCard>
@@ -531,12 +531,12 @@ HTML_TEMPLATE = """
                                 value={stats.online}
                                 gradient="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30"
                             >
-                                <p className={`text-sm mt-2 flex items-center gap-1 ${
+                                <p className={`text-sm mt-2 flex items-center justify-center gap-1 ${
                                     stats.total > 0 && (stats.online / stats.total) * 100 >= 50 
                                         ? 'text-emerald-400' 
                                         : 'text-rose-400'
                                 }`}>
-                                    {stats.total > 0 && (stats.online / stats.total) * 100 >= 50 ? '↑' : '↓'}
+                                    {stats.total > 0 && (stats.online / stats.total) * 100 >= 50 ? '↗' : '↘'}
                                     {stats.total > 0 ? `${((stats.online / stats.total) * 100).toFixed(1)}%` : '0%'} Online
                                 </p>
                             </StatCard>
@@ -546,12 +546,12 @@ HTML_TEMPLATE = """
                                 value={stats.offline}
                                 gradient="bg-gradient-to-br from-rose-600/20 to-pink-600/20 border border-rose-500/30"
                             >
-                                <p className={`text-sm mt-2 flex items-center gap-1 ${
+                                <p className={`text-sm mt-2 flex items-center justify-center gap-1 ${
                                     stats.total > 0 && (stats.offline / stats.total) * 100 < 50 
                                         ? 'text-emerald-400' 
                                         : 'text-rose-400'
                                 }`}>
-                                    {stats.total > 0 && (stats.offline / stats.total) * 100 < 50 ? '↓' : '↑'}
+                                    {stats.total > 0 && (stats.offline / stats.total) * 100 < 50 ? '↘' : '↗'}
                                     {stats.total > 0 ? `${((stats.offline / stats.total) * 100).toFixed(1)}%` : '0%'} Offline
                                 </p>
                             </StatCard>
@@ -561,8 +561,8 @@ HTML_TEMPLATE = """
                                 value={stats.diamonds}
                                 gradient="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/30"
                             >
-                                <p className="text-sm text-cyan-400 mt-2 flex items-center gap-1">
-                                    💎 {(stats.diamonds / 2).toFixed(0)} per 30 sec
+                                <p className="text-sm text-cyan-400 mt-2 flex items-center justify-center gap-1">
+                                    ↗ {(stats.diamonds / 2).toFixed(0)} per 30 sec
                                 </p>
                             </StatCard>
                         </div>
