@@ -184,6 +184,8 @@ HTML_TEMPLATE = """
             });
             const [deviceStats, setDeviceStats] = useState({});
             const [isLoading, setIsLoading] = useState(true);
+            const [showPopup, setShowPopup] = useState(false);
+            const [sheetUrl, setSheetUrl] = useState("");
             const [sortConfig, setSortConfig] = useState({ key: 'diamonds', direction: 'desc' });
             const STATUS_TIMEOUT = 30000;
 
@@ -344,6 +346,26 @@ HTML_TEMPLATE = """
                 }
             }, [fetchData]);
 
+            const handleSend = async () => {
+                if (!sheetUrl.trim()) {
+                alert("กรุณาใส่ URL ของ SheetDB API ก่อน");
+                return;
+                }
+                try {
+                const res = await fetch("/export_to_sheet", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ api_url: sheetUrl }),
+                });
+                const data = await res.json();
+                alert(data.message || "ส่งข้อมูลสำเร็จ");
+                setShowPopup(false);
+                setSheetUrl("");
+                } catch (err) {
+                alert("เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message);
+                }
+            };
+
             useEffect(() => {
                 const fetchInterval = setInterval(fetchData, 2000);
                 const updateInterval = setInterval(updateTimeAndStatus, 1000);
@@ -402,35 +424,49 @@ HTML_TEMPLATE = """
                                 </div>
                                 <div className="flex items-center gap-3">
 
-                                    <input
+                                <div className="flex flex-col items-center gap-4">
+                                {/* ปุ่มหลัก */}
+                                <button
+                                    onClick={() => setShowPopup(true)}
+                                    className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 rounded-lg text-sm font-medium transition-all duration-200"
+                                >
+                                    📤 ส่งข้อมูลไปยัง Sheet
+                                </button>
+
+                                {/* Popup */}
+                                {showPopup && (
+                                    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+                                    <div className="bg-[#0f172a] border border-cyan-500/30 p-6 rounded-2xl shadow-lg w-96 animate-fadeIn">
+                                        <h2 className="text-cyan-300 text-lg font-semibold mb-3 text-center">
+                                        กรอก URL ของ SheetDB API
+                                        </h2>
+
+                                        <input
                                         type="text"
-                                        id="sheetUrl"
-                                        placeholder="ใส่ URL ของ SheetDB API..."
-                                        className="px-3 py-2 rounded-lg bg-slate-800/50 border border-slate-600/50 text-slate-200 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                    />
-                                    <button
-                                        onClick={async () => {
-                                            const sheetUrl = document.getElementById("sheetUrl").value.trim();
-                                            if (!sheetUrl) {
-                                                alert("กรุณาใส่ URL ของ SheetDB API ก่อน");
-                                                return;
-                                            }
-                                            try {
-                                                const res = await fetch("/export_to_sheet", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ api_url: sheetUrl }),
-                                                });
-                                                const data = await res.json();
-                                                alert(data.message || "ส่งข้อมูลสำเร็จ");
-                                            } catch (err) {
-                                                alert("เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message);
-                                            }
-                                        }}
-                                        className="px-4 py-2 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 rounded-lg text-sm font-medium transition-all duration-200"
-                                    >
-                                        📤 ส่งไปยัง Sheet
-                                    </button>
+                                        placeholder="เช่น https://sheetdb.io/api/v1/xxxxxx"
+                                        value={sheetUrl}
+                                        onChange={(e) => setSheetUrl(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-lg bg-slate-800 text-slate-100 border border-cyan-600 focus:outline-none focus:ring focus:ring-cyan-400/50"
+                                        />
+
+                                        <div className="flex justify-end gap-2 mt-4">
+                                        <button
+                                            onClick={() => setShowPopup(false)}
+                                            className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-400 text-sm transition-all duration-200"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            onClick={handleSend}
+                                            className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 text-cyan-400 text-sm transition-all duration-200"
+                                        >
+                                            ส่งข้อมูล
+                                        </button>
+                                        </div>
+                                    </div>
+                                    </div>
+                                )}
+                                </div>
                                     <button
                                         onClick={handleCleanupOffline}
                                         className="px-4 py-2 bg-orange-600/20 hover:bg-orange-600/30 border border-orange-500/50 text-orange-400 rounded-lg text-sm font-medium transition-all duration-200"
@@ -455,7 +491,7 @@ HTML_TEMPLATE = """
                                         }`}></div>
                                         <span className="text-sm font-medium">
                                             {connectionStatus === 'connected' ? 'Connected' : 
-                                             connectionStatus === 'error' ? 'Error' : 'Connecting'}
+                                            connectionStatus === 'error' ? 'Error' : 'Connecting'}
                                         </span>
                                     </div>
                                 </div>
@@ -790,3 +826,6 @@ if __name__ == "__main__":
     print(f"⏱️  Timeout: {TIMEOUT}s | Cache TTL: {CACHE_TTL}s")
     print(f"📊 Supabase URL: {SUPABASE_URL}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
+
+
+    
