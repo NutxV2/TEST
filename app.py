@@ -529,29 +529,17 @@ HTML_TEMPLATE = """
                                 title="Total Diamonds"
                                 value={stats.diamonds}
                                 gradient="bg-gradient-to-br from-cyan-600/20 to-blue-600/20 border border-cyan-500/30"
-                            />
-                        </div>
-                        {/* Diamonds Per Second Card */}
-                        <div className="mb-6 fade-in">
-                            <div className="relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-amber-600/20 to-yellow-600/20 border border-amber-500/30 backdrop-blur-sm">
-                                <div className="relative z-10">
-                                    <div className="text-sm font-medium text-white/70 uppercase tracking-wider mb-2">
-                                        Diamonds Per Second
+                            >
+                                <div className="flex items-baseline gap-3 mt-3">
+                                    <div className={`text-5xl font-bold ${diamondsPerSecond >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        {diamondsPerSecond >= 0 ? '+' : ''}↗ {diamondsPerSecond.toLocaleString()}
                                     </div>
-                                    <div className="flex items-baseline gap-3">
-                                        <div className={`text-5xl font-bold ${diamondsPerSecond >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                            {diamondsPerSecond >= 0 ? '+' : ''}{diamondsPerSecond.toLocaleString()}
-                                        </div>
-                                        <div className="text-lg text-white/60">
-                                            💎/s
-                                        </div>
-                                    </div>
-                                    <div className="mt-3 text-xs text-white/50">
-                                        Rate of diamond accumulation across all accounts
+                                    <div className="text-lg text-white/60">
+                                        /s
                                     </div>
                                 </div>
-                                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-                            </div>
+                            </StatCard>
+
                         </div>
 
                         {sortedDeviceStats.length > 0 && (
